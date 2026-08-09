@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PoupaMax - Gestão Financeira Inteligente (50/30/20)</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js CDN para gráficos interativos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    
+    <!-- Lucide Icons CDN para ícones modernos -->
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            950: '#06090e',
+                            900: '#0b0f19',
+                            800: '#131b2e',
+                            700: '#1e293b',
+                            600: '#334155'
+                        },
+                        brand: {
+                            500: '#10b981', // Verde Esmeralda (Finanças e Investimento)
+                            600: '#059669',
+                            700: '#047857',
+                            400: '#34d399'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #06090e;
+            color: #f1f5f9;
+        }
+
+        /* Barra de rolagem personalizada estilizada */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+
+        /* Painel translúcido em efeito Glassmorphism */
+        .glass-panel {
+            background: rgba(19, 27, 46, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        /* Animação de entrada para a tabela do simulador */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .anim-fade-in {
+            animation: fadeInUp 0.3s ease forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-brand-500 selection:text-dark-950">
+
+    <header class="border-b border-dark-700/60 bg-dark-900/80 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div aria-hidden="true" class="p-2.5 bg-brand-500/10 rounded-xl border border-brand-500/20 text-brand-500 shadow-sm shadow-brand-500/20">
+                    <i data-lucide="piggy-bank" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl font-black tracking-tight bg-gradient-to-r from-brand-400 via-emerald-400 to-teal-300 bg-clip-text text-transparent">PoupaMax</span>
+                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30">v2.0</span>
+                    </div>
+                    <span class="text-xs text-slate-400 block -mt-1">Planejamento Financeiro & Método 50/30/20</span>
+                </div>
+            </div>
+
+            <!-- Botões de Utilitários e Demonstração -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button type="button" onclick="gerarDadosDemonstracao()" aria-label="Carregar dados de demonstração" class="text-xs px-3 py-2 bg-dark-700/60 hover:bg-dark-700 text-slate-300 hover:text-white rounded-lg border border-dark-600 transition-all flex items-center gap-1.5 cursor-pointer">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span class="hidden sm:inline font-medium">Dados Demo</span>
+                </button>
+                <button type="button" onclick="exportarCSV()" aria-label="Exportar transações em CSV" class="text-xs px-3 py-2 bg-dark-700/60 hover:bg-dark-700 text-slate-300 hover:text-white rounded-lg border border-dark-600 transition-all flex items-center gap-1.5 cursor-pointer">
+                    <i data-lucide="download" class="w-3.5 h-3.5 text-brand-400"></i>
+                    <span class="hidden sm:inline font-medium">Exportar CSV</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Notificação de Toast Customizada -->
+    <div id="toast-container" role="status" aria-live="polite" aria-atomic="true" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-dark-800 border-l-4 border-brand-500 text-slate-100 p-4 rounded-r-xl shadow-2xl flex items-center gap-3 min-w-[300px]">
+            <div id="toast-icon" class="text-brand-500">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p id="toast-title" class="font-bold text-sm">Sucesso</p>
+                <p id="toast-message" class="text-xs text-slate-400">Operação efetuada com sucesso.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação Customizado (Substituição amigável de confirm) -->
+    <div id="modal-confirm" role="presentation" class="fixed inset-0 bg-dark-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc" class="glass-panel p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl border border-dark-700 space-y-4">
+            <div class="flex items-center gap-3 text-amber-400">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                <h3 class="text-lg font-bold text-slate-100" id="modal-title">Confirmar Ação</h3>
+            </div>
+            <p class="text-sm text-slate-300" id="modal-desc">Tem certeza que deseja remover este item?</p>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" id="btn-modal-cancel" class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-slate-300 text-sm font-medium rounded-xl transition-colors">Cancelar</button>
+                <button type="button" id="btn-modal-confirm" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium rounded-xl transition-colors">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- SEÇÃO 1: CONFIGURAÇÃO INICIAL (Regra 50/30/20) -->
+        <section class="glass-panel rounded-2xl p-6 relative overflow-hidden shadow-xl">
+            <div class="absolute -top-12 -right-12 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex flex-col lg:flex-row gap-8 items-start lg:items-center justify-between">
+                <!-- Entrada de Salário/Renda Base -->
+                <div class="w-full lg:w-1/3 space-y-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="wallet" class="text-brand-400 w-5 h-5"></i>
+                        <h2 class="text-lg font-bold text-slate-100">1. Configuração da Renda</h2>
+                    </div>
+                    <p id="descricao-renda" class="text-xs text-slate-400 leading-relaxed">
+                        Informe o seu salário líquido mensal. O sistema calculará a divisão ideal baseada no método consagrado **50/30/20**.
+                    </p>
+                    <div class="relative mt-2">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-semibold text-sm">
+                            R$
+                        </div>
+                        <input type="number" id="input-renda" aria-describedby="descricao-renda" placeholder="0,00" step="0.01" min="0"
+                            class="block w-full pl-10 pr-4 py-3 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-xl font-extrabold text-slate-100 transition-colors placeholder:text-dark-600">
+                    </div>
+                </div>
+
+                <!-- Visualização das Fatias Calculadas -->
+                <div class="w-full lg:w-2/3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- 50% Necessidades -->
+                    <div class="bg-dark-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-blue-500/40 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">Necessidades (50%)</span>
+                            <span class="p-1.5 bg-blue-500/10 rounded-lg text-blue-400"><i data-lucide="home" class="w-4 h-4"></i></span>
+                        </div>
+                        <div>
+                            <span class="text-2xl font-black text-slate-100" id="target-necessidades">R$ 0,00</span>
+                            <p class="text-[11px] text-slate-400 mt-1">Aluguel, mercado, contas fixas e transporte.</p>
+                        </div>
+                    </div>
+
+                    <!-- 30% Desejos -->
+                    <div class="bg-dark-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-purple-500/40 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-purple-400 uppercase tracking-wider">Desejos (30%)</span>
+                            <span class="p-1.5 bg-purple-500/10 rounded-lg text-purple-400"><i data-lucide="tv" class="w-4 h-4"></i></span>
+                        </div>
+                        <div>
+                            <span class="text-2xl font-black text-slate-100" id="target-desejos">R$ 0,00</span>
+                            <p class="text-[11px] text-slate-400 mt-1">Lazer, hobbies, passeios e assinaturas.</p>
+                        </div>
+                    </div>
+
+                    <!-- 20% Aportes (Destaque do Alvo Principal) -->
+                    <div class="bg-brand-500/10 border-2 border-brand-500/40 rounded-xl p-4 flex flex-col justify-between hover:border-brand-500 transition-all relative overflow-hidden shadow-lg shadow-brand-500/5">
+                        <div class="absolute top-0 right-0 bg-brand-500 text-dark-950 font-black text-[9px] px-2 py-0.5 rounded-bl uppercase tracking-widest">ALVO DE APORTE</div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-brand-400 uppercase tracking-wider">Investimentos (20%)</span>
+                            <span class="p-1.5 bg-brand-500/20 rounded-lg text-brand-400"><i data-lucide="trending-up" class="w-4 h-4"></i></span>
+                        </div>
+                        <div>
+                            <span class="text-2xl font-black text-brand-400" id="target-aportes">R$ 0,00</span>
+                            <p class="text-[11px] text-slate-300 mt-1 font-medium">Meta mensal de reservas e renda passiva.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 2: PAINEL DE CONTROLE (CARDS RESUMO) -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card Renda Total -->
+            <div class="glass-panel p-5 rounded-2xl flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-medium text-slate-400">Renda Total Registrada</span>
+                    <h3 class="text-xl font-bold text-slate-100 mt-1" id="card-renda-total">R$ 0,00</h3>
+                </div>
+                <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                    <i data-lucide="arrow-down-left" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <!-- Card Total Gasto -->
+            <div class="glass-panel p-5 rounded-2xl flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-medium text-slate-400">Total Gasto (Saídas)</span>
+                    <h3 class="text-xl font-bold text-rose-400 mt-1" id="card-total-gasto">R$ 0,00</h3>
+                </div>
+                <div class="p-3 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
+                    <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <!-- Card Saldo Atual -->
+            <div class="glass-panel p-5 rounded-2xl flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-medium text-slate-400">Saldo Livre Disponível</span>
+                    <h3 class="text-xl font-bold text-slate-100 mt-1" id="card-saldo-atual">R$ 0,00</h3>
+                </div>
+                <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
+                    <i data-lucide="scale" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <!-- Card Total Poupado/Aportado -->
+            <div class="glass-panel p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-brand-500">
+                <div>
+                    <span class="text-xs font-medium text-brand-400 font-semibold">Total Real Aportado</span>
+                    <h3 class="text-xl font-black text-brand-400 mt-1" id="card-total-poupado">R$ 0,00</h3>
+                </div>
+                <div class="p-3 bg-brand-500/20 text-brand-400 rounded-xl border border-brand-500/30">
+                    <i data-lucide="vault" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- FORMULÁRIO DE REGISTRO DE TRANSAÇÃO (5 colunas em telas grandes) -->
+            <section class="lg:col-span-5 glass-panel rounded-2xl p-6 h-fit space-y-5">
+                <div class="flex items-center justify-between border-b border-dark-700/60 pb-4">
+                    <div class="flex items-center gap-2.5">
+                        <div class="p-2 bg-brand-500/10 text-brand-400 rounded-lg">
+                            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-slate-100">Nova Transação</h2>
+                    </div>
+                    <span class="text-xs text-slate-400">Lançamento</span>
+                </div>
+
+                <form id="form-transacao" class="space-y-4">
+                    <!-- Descrição -->
+                    <div>
+                        <label for="trans-desc" class="block text-xs font-medium text-slate-300 mb-1">Descrição</label>
+                        <input type="text" id="trans-desc" placeholder="Ex: Supermercado, Aporte Tesouro, Salário..." required
+                            class="w-full px-3.5 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm text-slate-100 placeholder:text-dark-600 outline-none">
+                    </div>
+
+                    <!-- Valor e Tipo -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="trans-valor" class="block text-xs font-medium text-slate-300 mb-1">Valor (R$)</label>
+                            <input type="number" id="trans-valor" placeholder="0.00" step="0.01" min="0.01" required
+                                class="w-full px-3.5 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm font-semibold text-slate-100 placeholder:text-dark-600 outline-none">
+                        </div>
+
+                        <div>
+                            <label for="trans-tipo" class="block text-xs font-medium text-slate-300 mb-1">Tipo</label>
+                            <select id="trans-tipo" required onchange="atualizarCategoriasPorTipo()"
+                                class="w-full px-3.5 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm text-slate-100 outline-none">
+                                <option value="saida">Saída (Gasto)</option>
+                                <option value="aporte">Aporte / Poupança</option>
+                                <option value="entrada">Entrada (Renda Extra)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Categoria e Classificação 50/30/20 -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="trans-cat" class="block text-xs font-medium text-slate-300 mb-1">Categoria</label>
+                            <select id="trans-cat" required
+                                class="w-full px-3.5 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm text-slate-100 outline-none">
+                                <option value="Alimentação">Alimentação</option>
+                                <option value="Moradia">Moradia</option>
+                                <option value="Transporte">Transporte</option>
+                                <option value="Saúde">Saúde</option>
+                                <option value="Lazer">Lazer</option>
+                                <option value="Investimentos">Investimentos</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="trans-regra" class="block text-xs font-medium text-slate-300 mb-1">Pilar (50/30/20)</label>
+                            <select id="trans-regra" required
+                                class="w-full px-3.5 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm text-slate-100 outline-none">
+                                <option value="necessidades">50% - Necessidades</option>
+                                <option value="desejos">30% - Desejos / Lazer</option>
+                                <option value="aportes">20% - Aportes / Poupança</option>
+                                <option value="nenhum">Nenhum (Entrada de Renda)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                        class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-dark-950 font-extrabold rounded-xl transition-all duration-200 shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30 flex items-center justify-center gap-2 cursor-pointer mt-2">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                        <span>Adicionar Transação</span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- DASHBOARD GRÁFICO (7 colunas em telas grandes) -->
+            <section class="lg:col-span-7 glass-panel rounded-2xl p-6 flex flex-col justify-between space-y-4">
+                <div class="flex items-center justify-between border-b border-dark-700/60 pb-4">
+                    <div class="flex items-center gap-2.5">
+                        <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-100">Planejado vs Real (50/30/20)</h2>
+                            <p class="text-xs text-slate-400">Comparativo do teto estipulado contra o executado</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Container do Canvas do Chart.js -->
+                <div class="relative w-full h-[280px] sm:h-[320px] my-auto">
+                    <canvas id="chart-503020" role="img" aria-label="Gráfico comparando metas e valores reais nos pilares necessidades, desejos e aportes"></canvas>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center text-xs text-slate-400 pt-2 border-t border-dark-700/60">
+                    <div>
+                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 mr-1"></span>
+                        Necessidades
+                    </div>
+                    <div>
+                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-purple-500 mr-1"></span>
+                        Desejos
+                    </div>
+                    <div>
+                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 mr-1"></span>
+                        Aportes
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- SEÇÃO: SIMULADOR DE JUROS COMPOSTOS -->
+        <section class="glass-panel rounded-2xl p-6 relative overflow-hidden shadow-xl space-y-6" id="secao-simulador">
+            <div class="absolute -bottom-16 -left-16 w-72 h-72 bg-teal-500/5 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -top-16 -right-16 w-72 h-72 bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Cabeçalho da Seção -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-dark-700/60 pb-5">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-teal-500/10 text-teal-400 rounded-xl border border-teal-500/20">
+                        <i data-lucide="calculator" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-100">Simulador de Juros Compostos</h2>
+                        <p class="text-xs text-slate-400">Projeção de crescimento com base na sua meta de 20% mensal</p>
+                    </div>
+                </div>
+                <button onclick="usarMeta20Porcento()" id="btn-usar-meta"
+                    class="text-xs px-4 py-2.5 bg-brand-500/15 hover:bg-brand-500/25 text-brand-400 font-semibold rounded-xl border border-brand-500/30 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                    <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                    Usar Meta de 20% (<span id="btn-meta-valor">R$ 0,00</span>)
+                </button>
+            </div>
+
+            <!-- Painel de Inputs + Cards de Resultado -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Formulário de Configuração do Simulador -->
+                <div class="lg:col-span-4 space-y-4">
+                    <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                        <i data-lucide="settings-2" class="w-4 h-4 text-teal-400"></i>
+                        Parâmetros da Simulação
+                    </h3>
+
+                    <!-- Aporte Mensal -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                            Aporte Mensal (R$)
+                            <span id="descricao-sim-aporte" class="ml-1 text-teal-400 font-normal">— quanto você vai guardar por mês</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 text-sm font-semibold pointer-events-none">R$</span>
+                            <input type="number" id="sim-aporte" aria-describedby="descricao-sim-aporte" placeholder="0,00" step="0.01" min="0"
+                                oninput="calcularSimulador()"
+                                class="w-full pl-10 pr-4 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm font-bold text-slate-100 placeholder:text-dark-600 outline-none transition-colors">
+                        </div>
+                    </div>
+
+                    <!-- Taxa de Juros Mensal -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                            Taxa de Juros Mensal (% a.m.)
+                            <span id="descricao-sim-taxa" class="ml-1 text-teal-400 font-normal">— rendimento estimado</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="sim-taxa" aria-describedby="descricao-sim-taxa" value="1.0" placeholder="1.0" step="0.01" min="0.01"
+                                oninput="calcularSimulador()"
+                                class="w-full pl-4 pr-8 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm font-bold text-slate-100 outline-none transition-colors">
+                            <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 text-sm font-semibold pointer-events-none">%</span>
+                        </div>
+                        <!-- Sugestões rápidas de taxa -->
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            <button onclick="definirTaxa(0.7)" class="text-[10px] px-2 py-1 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer">Poupança ~0,7%</button>
+                            <button onclick="definirTaxa(1.0)" class="text-[10px] px-2 py-1 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer">CDB/Tesouro ~1%</button>
+                            <button onclick="definirTaxa(1.5)" class="text-[10px] px-2 py-1 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer">FIIs ~1,5%</button>
+                            <button onclick="definirTaxa(2.0)" class="text-[10px] px-2 py-1 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer">Variável ~2%</button>
+                        </div>
+                    </div>
+
+                    <!-- Período em Meses -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                            Período
+                            <span class="ml-1 text-teal-400 font-normal">— por quanto tempo?</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <input type="number" id="sim-periodo" aria-label="Quantidade do período" value="12" placeholder="12" step="1" min="1" max="600"
+                                    oninput="calcularSimulador()"
+                                    class="w-full pl-4 pr-4 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm font-bold text-slate-100 outline-none transition-colors">
+                            </div>
+                            <select id="sim-periodo-unidade" onchange="calcularSimulador()"
+                                class="px-3 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-teal-500 text-sm text-slate-100 outline-none transition-colors">
+                                <option value="meses">Meses</option>
+                                <option value="anos">Anos</option>
+                            </select>
+                        </div>
+                        <!-- Atalhos rápidos -->
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            <button onclick="definirPeriodo(12,'meses')" class="text-[10px] px-2 py-1 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer">1 ano</button>
+                            <button onclick="definirPeriodo(24,'meses')" class="text-[10px] px-2 py-1 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer">2 anos</button>
+                            <button onclick="definirPeriodo(5,'anos')" class="text-[10px] px-2 py-1 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer">5 anos</button>
+                            <button onclick="definirPeriodo(10,'anos')" class="text-[10px] px-2 py-1 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer">10 anos</button>
+                            <button onclick="definirPeriodo(20,'anos')" class="text-[10px] px-2 py-1 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer">20 anos</button>
+                        </div>
+                    </div>
+
+                    <!-- Capital Inicial (Opcional) -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                            Capital Inicial (R$) <span class="text-slate-500 font-normal">— opcional</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 text-sm font-semibold pointer-events-none">R$</span>
+                            <input type="number" id="sim-capital-inicial" aria-label="Capital inicial em reais" placeholder="0,00" step="0.01" min="0"
+                                oninput="calcularSimulador()"
+                                class="w-full pl-10 pr-4 py-2.5 bg-dark-950 border border-dark-700 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm font-bold text-slate-100 placeholder:text-dark-600 outline-none transition-colors">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cards de Resultado e Gráfico -->
+                <div class="lg:col-span-8 space-y-5">
+
+                    <!-- Cards de Resultado Principal -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="sim-resultados">
+                        <div class="bg-dark-900/80 border border-dark-700 rounded-xl p-4 text-center">
+                            <p class="text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1">Montante Final</p>
+                            <p class="text-xl font-black text-teal-400" id="sim-res-montante">R$ 0,00</p>
+                        </div>
+                        <div class="bg-dark-900/80 border border-dark-700 rounded-xl p-4 text-center">
+                            <p class="text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1">Total Investido</p>
+                            <p class="text-xl font-black text-slate-100" id="sim-res-investido">R$ 0,00</p>
+                        </div>
+                        <div class="bg-dark-900/80 border border-dark-700 rounded-xl p-4 text-center">
+                            <p class="text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1">Rendimento</p>
+                            <p class="text-xl font-black text-brand-400" id="sim-res-juros">R$ 0,00</p>
+                        </div>
+                        <div class="bg-dark-900/80 border border-dark-700 rounded-xl p-4 text-center">
+                            <p class="text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1">Ganho (%)</p>
+                            <p class="text-xl font-black text-amber-400" id="sim-res-ganho-pct">0,00%</p>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico de Evolução -->
+                    <div class="bg-dark-900/60 border border-dark-700 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="line-chart" class="w-4 h-4 text-teal-400"></i>
+                                Evolução do Patrimônio
+                            </p>
+                            <div class="flex gap-3 text-[10px] text-slate-400">
+                                <span><span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-500 mr-1"></span>Investido</span>
+                                <span><span class="inline-block w-2.5 h-2.5 rounded-full bg-teal-400 mr-1"></span>Montante</span>
+                            </div>
+                        </div>
+                        <div class="relative h-[200px]">
+                            <canvas id="chart-simulador" role="img" aria-label="Gráfico de evolução do patrimônio investido e montante com juros"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela de Projeção Anual -->
+            <div id="sim-tabela-container" class="hidden">
+                <div class="flex items-center justify-between mb-3 border-t border-dark-700/60 pt-5">
+                    <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                        <i data-lucide="table-2" class="w-4 h-4 text-teal-400"></i>
+                        Projeção Ano a Ano
+                    </h3>
+                    <button onclick="toggleTabelaProjecao()" id="btn-toggle-tabela"
+                        class="text-xs px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-slate-300 rounded-lg border border-dark-600 transition-colors cursor-pointer flex items-center gap-1.5">
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5" id="icon-toggle-tabela"></i>
+                        <span id="texto-toggle-tabela">Ver projeção detalhada</span>
+                    </button>
+                </div>
+                <div id="sim-tabela-projecao" class="hidden overflow-x-auto rounded-xl border border-dark-700 anim-fade-in">
+                    <table class="w-full text-xs text-left border-collapse">
+                        <thead>
+                            <tr class="bg-dark-800 text-slate-400 uppercase tracking-wider text-[10px] border-b border-dark-700">
+                                <th class="py-3 px-4 font-semibold">Ano</th>
+                                <th class="py-3 px-4 font-semibold text-right">Total Investido</th>
+                                <th class="py-3 px-4 font-semibold text-right">Rendimento Acum.</th>
+                                <th class="py-3 px-4 font-semibold text-right">Montante</th>
+                                <th class="py-3 px-4 font-semibold text-right">Ganho (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sim-tabela-body" class="divide-y divide-dark-700/50 text-slate-300">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 4: HISTÓRICO DE TRANSAÇÕES -->
+        <section class="glass-panel rounded-2xl p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-dark-700/60 pb-4">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+                        <i data-lucide="history" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-100">Histórico de Transações</h2>
+                        <p class="text-xs text-slate-400">Lançamentos efetuados e acompanhamento</p>
+                    </div>
+                </div>
+
+                <!-- Filtro de Busca -->
+                <div class="relative w-full sm:w-64">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                    </div>
+                    <input type="text" id="filtro-busca" placeholder="Filtrar lançamentos..." onkeyup="renderizarTabela()"
+                        class="w-full pl-9 pr-3 py-1.5 bg-dark-950 border border-dark-700 rounded-xl text-xs text-slate-100 placeholder:text-dark-600 focus:ring-1 focus:ring-brand-500 outline-none">
+                </div>
+            </div>
+
+            <!-- Tabela de Lançamentos -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <caption class="sr-only">Histórico de transações financeiras registradas</caption>
+                    <thead>
+                        <tr class="text-slate-400 border-b border-dark-700 uppercase tracking-wider text-[11px]">
+                            <th class="py-3 px-3 font-semibold">Data</th>
+                            <th class="py-3 px-3 font-semibold">Descrição</th>
+                            <th class="py-3 px-3 font-semibold">Categoria</th>
+                            <th class="py-3 px-3 font-semibold">Pilar 50/30/20</th>
+                            <th class="py-3 px-3 font-semibold text-right">Valor</th>
+                            <th class="py-3 px-3 font-semibold text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-transacoes-body" class="divide-y divide-dark-700/50 text-slate-300">
+                        <!-- Linhas geradas dinamicamente via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mensagem de lista vazia -->
+            <div id="mens-sem-transacoes" class="hidden py-8 text-center text-slate-500 text-xs">
+                Nenhuma transação registrada. Utilize o formulário acima ou carregue os <button onclick="gerarDadosDemonstracao()" class="text-brand-400 underline font-semibold">Dados Demo</button>.
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-dark-700/60 bg-dark-900/40 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p>PoupaMax &copy; 2026 - Desenvolvido para Portfólio de Gestão Financeira Pessoal.</p>
+            <p class="flex items-center gap-1 text-slate-400">
+                <i data-lucide="shield-check" class="w-4 h-4 text-brand-500"></i>
+                Dados salvos com privacidade local no seu navegador.
+            </p>
+        </div>
+    </footer>
+
+    <!-- LÓGICA JAVASCRIPT VANILLA -->
+    <script>
+        /**
+         * ESTRUTURA DE DADOS DO APLICATIVO
+         * Armazenamento principal e chaves de LocalStorage
+         */
+        const STORAGE_KEY = 'poupamax_app_data_v2';
+
+        let appState = {
+            rendaMensal: 0,
+            transacoes: []
+        };
+
+        // Instâncias globais dos gráficos Chart.js
+        let chartInstance = null;
+        let chartSimuladorInstance = null;
+
+        // Flag de visibilidade da tabela de projeção
+        let tabelaProjecaoVisivel = false;
+
+        /**
+         * Inicialização do App assim que a página carrega
+         */
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarDadosDoStorage();
+            configurarEventListeners();
+            inicializarGrafico();
+            inicializarGraficoSimulador();
+            atualizarTudo();
+            calcularSimulador();
+            lucide.createIcons();
+        });
+
+        /**
+         * Carrega os dados salvos no LocalStorage do navegador
+         */
+        function carregarDadosDoStorage() {
+            try {
+                const rawData = localStorage.getItem(STORAGE_KEY);
+                if (rawData) {
+                    appState = JSON.parse(rawData);
+                }
+            } catch (err) {
+                console.error("Erro ao carregar do LocalStorage:", err);
+                mostrarToast("Erro", "Não foi possível carregar os dados salvos.", "error");
+            }
+        }
+
+        /**
+         * Salva o estado atual no LocalStorage
+         */
+        function salvarDadosNoStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            } catch (err) {
+                console.error("Erro ao salvar no LocalStorage:", err);
+                mostrarToast("Erro", "Falha ao salvar os dados.", "error");
+            }
+        }
+
+        /**
+         * Configuração dos escutadores de eventos da interface
+         */
+        function configurarEventListeners() {
+            // Atualização dinâmica da renda mensal
+            const inputRenda = document.getElementById('input-renda');
+            inputRenda.value = appState.rendaMensal > 0 ? appState.rendaMensal : '';
+            
+            inputRenda.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                appState.rendaMensal = isNaN(val) || val < 0 ? 0 : val;
+                salvarDadosNoStorage();
+                atualizarTudo();
+            });
+
+            // Submissão do formulário de transação
+            const formTransacao = document.getElementById('form-transacao');
+            formTransacao.addEventListener('submit', (e) => {
+                e.preventDefault();
+                adicionarTransacao();
+            });
+        }
+
+        /**
+         * Ajusta automaticamente os campos de categoria/pilar com base no tipo de transação selecionado
+         */
+        function atualizarCategoriasPorTipo() {
+            const tipo = document.getElementById('trans-tipo').value;
+            const selectCat = document.getElementById('trans-cat');
+            const selectRegra = document.getElementById('trans-regra');
+
+            if (tipo === 'aporte') {
+                selectCat.value = 'Investimentos';
+                selectRegra.value = 'aportes';
+            } else if (tipo === 'entrada') {
+                selectRegra.value = 'nenhum';
+            } else {
+                if (selectRegra.value === 'nenhum') {
+                    selectRegra.value = 'necessidades';
+                }
+            }
+        }
+
+        /**
+         * Processa a criação de uma nova transação
+         */
+        function adicionarTransacao() {
+            const desc = document.getElementById('trans-desc').value.trim();
+            const valor = parseFloat(document.getElementById('trans-valor').value);
+            const tipo = document.getElementById('trans-tipo').value;
+            const categoria = document.getElementById('trans-cat').value;
+            const pilar = document.getElementById('trans-regra').value;
+
+            if (!desc || isNaN(valor) || valor <= 0) {
+                mostrarToast("Atenção", "Preencha uma descrição válida e valor maior que zero.", "error");
+                return;
+            }
+
+            const novaTransacao = {
+                id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                data: new Date().toISOString(),
+                descricao: desc,
+                valor: valor,
+                tipo: tipo, // 'entrada', 'saida', 'aporte'
+                categoria: categoria,
+                pilar: pilar // 'necessidades', 'desejos', 'aportes', 'nenhum'
+            };
+
+            appState.transacoes.unshift(novaTransacao);
+            salvarDadosNoStorage();
+            atualizarTudo();
+
+            // Limpa o formulário
+            document.getElementById('trans-desc').value = '';
+            document.getElementById('trans-valor').value = '';
+            
+            mostrarToast("Transação Adicionada", `"${desc}" registrado com sucesso!`, "success");
+        }
+
+        /**
+         * Remove uma transação através da confirmação no modal
+         */
+        function excluirTransacao(id) {
+            confirmarAcao(
+                "Excluir Transação",
+                "Tem certeza que deseja remover esta transação do histórico?",
+                () => {
+                    appState.transacoes = appState.transacoes.filter(t => t.id !== id);
+                    salvarDadosNoStorage();
+                    atualizarTudo();
+                    mostrarToast("Removido", "Transação excluída com sucesso.", "success");
+                }
+            );
+        }
+
+        /**
+         * Recomputa todos os cálculos e atualiza a interface visualmente
+         */
+        function atualizarTudo() {
+            const renda = appState.rendaMensal;
+
+            // 1. Cálculo dos Alvos da Regra 50/30/20
+            const alvoNecessidades = renda * 0.50;
+            const alvoDesejos = renda * 0.30;
+            const alvoAportes = renda * 0.20;
+
+            document.getElementById('target-necessidades').textContent = formatarMoeda(alvoNecessidades);
+            document.getElementById('target-desejos').textContent = formatarMoeda(alvoDesejos);
+            document.getElementById('target-aportes').textContent = formatarMoeda(alvoAportes);
+
+            // Atualiza o botão do simulador com a meta atual de 20%
+            document.getElementById('btn-meta-valor').textContent = formatarMoeda(alvoAportes);
+
+            // 2. Acumulação das saídas e aportes do histórico
+            let totalEntradasExtras = 0;
+            let totalSaidas = 0;
+            let totalAportes = 0;
+
+            let gastoRealNecessidades = 0;
+            let gastoRealDesejos = 0;
+            let gastoRealAportes = 0;
+
+            appState.transacoes.forEach(t => {
+                if (t.tipo === 'entrada') {
+                    totalEntradasExtras += t.valor;
+                } else if (t.tipo === 'saida') {
+                    totalSaidas += t.valor;
+                    if (t.pilar === 'necessidades') gastoRealNecessidades += t.valor;
+                    if (t.pilar === 'desejos') gastoRealDesejos += t.valor;
+                    if (t.pilar === 'aportes') gastoRealAportes += t.valor;
+                } else if (t.tipo === 'aporte') {
+                    totalAportes += t.valor;
+                    gastoRealAportes += t.valor;
+                }
+            });
+
+            const rendaTotalGlobal = renda + totalEntradasExtras;
+            const saldoLivre = rendaTotalGlobal - totalSaidas - totalAportes;
+
+            // 3. Atualização dos Cards Superiores
+            document.getElementById('card-renda-total').textContent = formatarMoeda(rendaTotalGlobal);
+            document.getElementById('card-total-gasto').textContent = formatarMoeda(totalSaidas);
+            document.getElementById('card-saldo-atual').textContent = formatarMoeda(saldoLivre);
+            document.getElementById('card-total-poupado').textContent = formatarMoeda(totalAportes);
+
+            // Destaca a cor do saldo livre se negativo
+            const elSaldo = document.getElementById('card-saldo-atual');
+            if (saldoLivre < 0) {
+                elSaldo.className = "text-xl font-bold text-rose-500 mt-1";
+            } else {
+                elSaldo.className = "text-xl font-bold text-slate-100 mt-1";
+            }
+
+            // 4. Atualização da Tabela e do Gráfico
+            renderizarTabela();
+            atualizarGrafico([alvoNecessidades, alvoDesejos, alvoAportes], [gastoRealNecessidades, gastoRealDesejos, gastoRealAportes]);
+            lucide.createIcons();
+        }
+
+        /**
+         * Renderiza a lista de transações na tabela com suporte a filtro
+         */
+        function renderizarTabela() {
+            const tbody = document.getElementById('tabela-transacoes-body');
+            const mensSemTrans = document.getElementById('mens-sem-transacoes');
+            const termoBusca = (document.getElementById('filtro-busca').value || '').toLowerCase();
+
+            tbody.innerHTML = '';
+
+            const transacoesFiltradas = appState.transacoes.filter(t => {
+                return t.descricao.toLowerCase().includes(termoBusca) ||
+                       t.categoria.toLowerCase().includes(termoBusca);
+            });
+
+            if (transacoesFiltradas.length === 0) {
+                mensSemTrans.classList.remove('hidden');
+                return;
+            } else {
+                mensSemTrans.classList.add('hidden');
+            }
+
+            transacoesFiltradas.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-dark-800/50 transition-colors border-b border-dark-700/30';
+
+                const dataFormatada = new Date(t.data).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit'
+                });
+
+                let badgeTipoClass = '';
+                let valorClass = '';
+                let sinal = '-';
+
+                if (t.tipo === 'entrada') {
+                    badgeTipoClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+                    valorClass = 'text-emerald-400 font-bold';
+                    sinal = '+';
+                } else if (t.tipo === 'aporte') {
+                    badgeTipoClass = 'bg-brand-500/20 text-brand-300 border-brand-500/40';
+                    valorClass = 'text-brand-400 font-extrabold';
+                    sinal = '+';
+                } else {
+                    badgeTipoClass = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+                    valorClass = 'text-slate-200 font-semibold';
+                    sinal = '-';
+                }
+
+                let badgePilarLabel = 'N/A';
+                if (t.pilar === 'necessidades') badgePilarLabel = '50% Necessidades';
+                if (t.pilar === 'desejos') badgePilarLabel = '30% Desejos';
+                if (t.pilar === 'aportes') badgePilarLabel = '20% Aportes';
+
+                tr.innerHTML = `
+                    <td class="py-3 px-3 text-slate-400 whitespace-nowrap">${dataFormatada}</td>
+                    <td class="py-3 px-3 font-medium text-slate-100">${escaparHTML(t.descricao)}</td>
+                    <td class="py-3 px-3">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-dark-700 border border-dark-600 text-slate-300">
+                            ${escaparHTML(t.categoria)}
+                        </span>
+                    </td>
+                    <td class="py-3 px-3">
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-medium border ${badgeTipoClass}">
+                            ${badgePilarLabel}
+                        </span>
+                    </td>
+                    <td class="py-3 px-3 text-right ${valorClass} whitespace-nowrap">
+                        ${sinal} ${formatarMoeda(t.valor)}
+                    </td>
+                    <td class="py-3 px-3 text-center whitespace-nowrap">
+                        <button onclick="excluirTransacao('${t.id}')" title="Excluir Transação"
+                            class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        /**
+         * Inicializa o gráfico Chart.js com estilizacao dark e responsiva
+         */
+        function inicializarGrafico() {
+            const ctx = document.getElementById('chart-503020').getContext('2d');
+            
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Necessidades (50%)', 'Desejos (30%)', 'Aportes (20%)'],
+                    datasets: [
+                        {
+                            label: 'Teto Estipulado (Meta)',
+                            data: [0, 0, 0],
+                            backgroundColor: 'rgba(51, 65, 85, 0.6)',
+                            borderColor: '#475569',
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.6
+                        },
+                        {
+                            label: 'Gasto / Aporte Real',
+                            data: [0, 0, 0],
+                            backgroundColor: [
+                                '#3b82f6', // Azul para Necessidades
+                                '#a855f7', // Roxo para Desejos
+                                '#10b981'  // Verde para Aportes
+                            ],
+                            borderRadius: 6,
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        label += formatarMoeda(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 } },
+                            grid: { display: false }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 10 },
+                                callback: function(value) { return 'R$ ' + value; }
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Atualiza os dados do gráfico dinamicamente
+         */
+        function atualizarGrafico(metas, reais) {
+            if (!chartInstance) return;
+            chartInstance.data.datasets[0].data = metas;
+            chartInstance.data.datasets[1].data = reais;
+            chartInstance.update();
+        }
+
+        // =====================================================================
+        // SIMULADOR DE JUROS COMPOSTOS
+        // =====================================================================
+
+        /**
+         * Inicializa o gráfico de linha para o simulador
+         */
+        function inicializarGraficoSimulador() {
+            const ctx = document.getElementById('chart-simulador').getContext('2d');
+            chartSimuladorInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Total Investido',
+                            data: [],
+                            borderColor: '#475569',
+                            backgroundColor: 'rgba(71, 85, 105, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Montante com Juros',
+                            data: [],
+                            borderColor: '#2dd4bf',
+                            backgroundColor: 'rgba(45, 212, 191, 0.08)',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatarMoeda(context.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#64748b', font: { family: 'Inter', size: 10 }, maxTicksLimit: 8 },
+                            grid: { display: false }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#64748b',
+                                font: { family: 'Inter', size: 10 },
+                                callback: function(value) {
+                                    if (value >= 1000000) return 'R$ ' + (value / 1000000).toFixed(1) + 'M';
+                                    if (value >= 1000) return 'R$ ' + (value / 1000).toFixed(0) + 'k';
+                                    return 'R$ ' + value;
+                                }
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.04)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Preenche o campo de aporte do simulador com a meta de 20%
+         */
+        function usarMeta20Porcento() {
+            const meta = appState.rendaMensal * 0.20;
+            if (meta <= 0) {
+                mostrarToast("Atenção", "Informe sua renda mensal primeiro para usar a meta de 20%.", "error");
+                return;
+            }
+            document.getElementById('sim-aporte').value = meta.toFixed(2);
+            calcularSimulador();
+            document.getElementById('secao-simulador').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            mostrarToast("Meta Aplicada", `Aporte de ${formatarMoeda(meta)} (20% da renda) carregado no simulador.`, "success");
+        }
+
+        /**
+         * Atalho: define taxa de juros e recalcula
+         */
+        function definirTaxa(taxa) {
+            document.getElementById('sim-taxa').value = taxa;
+            calcularSimulador();
+        }
+
+        /**
+         * Atalho: define período e unidade e recalcula
+         */
+        function definirPeriodo(valor, unidade) {
+            document.getElementById('sim-periodo').value = valor;
+            document.getElementById('sim-periodo-unidade').value = unidade;
+            calcularSimulador();
+        }
+
+        /**
+         * Alterna visibilidade da tabela de projeção anual
+         */
+        function toggleTabelaProjecao() {
+            tabelaProjecaoVisivel = !tabelaProjecaoVisivel;
+            const tabela = document.getElementById('sim-tabela-projecao');
+            const icone = document.getElementById('icon-toggle-tabela');
+            const texto = document.getElementById('texto-toggle-tabela');
+
+            if (tabelaProjecaoVisivel) {
+                tabela.classList.remove('hidden');
+                tabela.classList.add('anim-fade-in');
+                icone.setAttribute('data-lucide', 'chevron-up');
+                texto.textContent = 'Ocultar projeção';
+            } else {
+                tabela.classList.add('hidden');
+                icone.setAttribute('data-lucide', 'chevron-down');
+                texto.textContent = 'Ver projeção detalhada';
+            }
+            lucide.createIcons();
+        }
+
+        /**
+         * Núcleo do simulador: calcula juros compostos e atualiza toda a UI do simulador
+         */
+        function calcularSimulador() {
+            const aporte = parseFloat(document.getElementById('sim-aporte').value) || 0;
+            const taxaMensal = (parseFloat(document.getElementById('sim-taxa').value) || 0) / 100;
+            const periodoUnidade = document.getElementById('sim-periodo-unidade').value;
+            let periodoValor = parseInt(document.getElementById('sim-periodo').value) || 12;
+            const capitalInicial = parseFloat(document.getElementById('sim-capital-inicial').value) || 0;
+
+            // Converte anos em meses se necessário
+            const totalMeses = periodoUnidade === 'anos' ? periodoValor * 12 : periodoValor;
+
+            // Validação básica
+            if (aporte <= 0 && capitalInicial <= 0) {
+                // Zera os resultados sem mensagem de erro
+                atualizarResultadosSimulador(0, 0, 0, 0);
+                return;
+            }
+            if (taxaMensal <= 0) {
+                mostrarToast("Atenção", "Defina uma taxa de juros maior que zero.", "error");
+                return;
+            }
+
+            // ─── Cálculo Mês a Mês ───
+            const labelsGrafico = [];
+            const dadosInvestido = [];
+            const dadosMontante = [];
+            const projecaoAnual = [];
+
+            let montante = capitalInicial;
+            let totalInvestido = capitalInicial;
+
+            for (let mes = 1; mes <= totalMeses; mes++) {
+                // Aplica rendimento sobre o montante atual
+                montante = montante * (1 + taxaMensal) + aporte;
+                totalInvestido += aporte;
+
+                // Registra apenas pontos relevantes para o gráfico (evita sobrecarga)
+                const intervalo = totalMeses <= 24 ? 1 : totalMeses <= 120 ? 6 : 12;
+                if (mes % intervalo === 0 || mes === totalMeses) {
+                    const anoAtual = Math.ceil(mes / 12);
+                    labelsGrafico.push(`Mês ${mes}`);
+                    dadosInvestido.push(parseFloat(totalInvestido.toFixed(2)));
+                    dadosMontante.push(parseFloat(montante.toFixed(2)));
+                }
+
+                // Snapshot anual para tabela de projeção
+                if (mes % 12 === 0) {
+                    const ano = mes / 12;
+                    const jurosAcum = montante - totalInvestido;
+                    const ganhoPct = totalInvestido > 0 ? ((jurosAcum / totalInvestido) * 100) : 0;
+                    projecaoAnual.push({ ano, totalInvestido, jurosAcum, montante, ganhoPct });
+                }
+            }
+
+            // Inclui mês final se não for múltiplo de 12
+            if (totalMeses % 12 !== 0) {
+                const jurosAcumFinal = montante - totalInvestido;
+                const ganhoPctFinal = totalInvestido > 0 ? ((jurosAcumFinal / totalInvestido) * 100) : 0;
+                projecaoAnual.push({
+                    ano: `${totalMeses}m`,
+                    totalInvestido,
+                    jurosAcum: jurosAcumFinal,
+                    montante,
+                    ganhoPct: ganhoPctFinal
+                });
+            }
+
+            const jurosTotal = montante - totalInvestido;
+            const ganhoPctTotal = totalInvestido > 0 ? ((jurosTotal / totalInvestido) * 100) : 0;
+
+            // Atualiza a UI
+            atualizarResultadosSimulador(montante, totalInvestido, jurosTotal, ganhoPctTotal);
+            atualizarGraficoSimulador(labelsGrafico, dadosInvestido, dadosMontante);
+            renderizarTabelaProjecao(projecaoAnual, totalMeses);
+        }
+
+        /**
+         * Atualiza os 4 cards de resultado do simulador
+         */
+        function atualizarResultadosSimulador(montante, investido, juros, ganhoPct) {
+            document.getElementById('sim-res-montante').textContent = formatarMoeda(montante);
+            document.getElementById('sim-res-investido').textContent = formatarMoeda(investido);
+            document.getElementById('sim-res-juros').textContent = formatarMoeda(juros);
+            document.getElementById('sim-res-ganho-pct').textContent = ganhoPct.toFixed(2).replace('.', ',') + '%';
+        }
+
+        /**
+         * Atualiza o gráfico de linha do simulador
+         */
+        function atualizarGraficoSimulador(labels, investido, montante) {
+            if (!chartSimuladorInstance) return;
+            chartSimuladorInstance.data.labels = labels;
+            chartSimuladorInstance.data.datasets[0].data = investido;
+            chartSimuladorInstance.data.datasets[1].data = montante;
+            chartSimuladorInstance.update();
+        }
+
+        /**
+         * Renderiza a tabela de projeção anual
+         */
+        function renderizarTabelaProjecao(projecao, totalMeses) {
+            const container = document.getElementById('sim-tabela-container');
+            const tbody = document.getElementById('sim-tabela-body');
+
+            if (projecao.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            tbody.innerHTML = '';
+
+            projecao.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                const isLast = idx === projecao.length - 1;
+                tr.className = isLast
+                    ? 'bg-teal-500/5 border-t-2 border-teal-500/30 font-semibold'
+                    : 'hover:bg-dark-800/50 transition-colors';
+
+                const labelAno = typeof row.ano === 'string' ? row.ano : `Ano ${row.ano}`;
+
+                tr.innerHTML = `
+                    <td class="py-2.5 px-4 text-slate-300">${labelAno}</td>
+                    <td class="py-2.5 px-4 text-right text-slate-300">${formatarMoeda(row.totalInvestido)}</td>
+                    <td class="py-2.5 px-4 text-right text-brand-400">${formatarMoeda(row.jurosAcum)}</td>
+                    <td class="py-2.5 px-4 text-right text-teal-400 font-bold">${formatarMoeda(row.montante)}</td>
+                    <td class="py-2.5 px-4 text-right text-amber-400">${row.ganhoPct.toFixed(1).replace('.', ',')}%</td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // =====================================================================
+        // FIM DO SIMULADOR
+        // =====================================================================
+
+        /**
+         * Formata números para padrão de moeda corrente Brasileira (BRL)
+         */
+        function formatarMoeda(valor) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor || 0);
+        }
+
+        /**
+         * Previne ataques de XSS ao renderizar texto do usuário
+         */
+        function escaparHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        /**
+         * Gera conjunto de dados de teste para apresentação em portfólio
+         */
+        function gerarDadosDemonstracao() {
+            appState = {
+                rendaMensal: 5000,
+                transacoes: [
+                    { id: 'd1', data: new Date().toISOString(), descricao: 'Aporte Ações e Tesouro Direto', valor: 1000, tipo: 'aporte', categoria: 'Investimentos', pilar: 'aportes' },
+                    { id: 'd2', data: new Date().toISOString(), descricao: 'Supermercado Mensal', valor: 1400, tipo: 'saida', categoria: 'Alimentação', pilar: 'necessidades' },
+                    { id: 'd3', data: new Date().toISOString(), descricao: 'Aluguel & Condomínio', valor: 1100, tipo: 'saida', categoria: 'Moradia', pilar: 'necessidades' },
+                    { id: 'd4', data: new Date().toISOString(), descricao: 'Jantar Restaurante Especial', valor: 350, tipo: 'saida', categoria: 'Lazer', pilar: 'desejos' },
+                    { id: 'd5', data: new Date().toISOString(), descricao: 'Assinaturas de Streaming', valor: 90, tipo: 'saida', categoria: 'Lazer', pilar: 'desejos' },
+                    { id: 'd6', data: new Date().toISOString(), descricao: 'Combustível e Transporte', valor: 300, tipo: 'saida', categoria: 'Transporte', pilar: 'necessidades' }
+                ]
+            };
+            document.getElementById('input-renda').value = 5000;
+            salvarDadosNoStorage();
+            atualizarTudo();
+            mostrarToast("Dados Demo Carregados", "Renda de R$ 5.000,00 e lançamentos criados com sucesso!", "success");
+        }
+
+        /**
+         * Exporta as transações para download em arquivo CSV
+         */
+        function exportarCSV() {
+            if (appState.transacoes.length === 0) {
+                mostrarToast("Aviso", "Não há transações para exportar.", "error");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,ID,Data,Descricao,Valor,Tipo,Categoria,Pilar\n";
+
+            appState.transacoes.forEach(t => {
+                const row = [
+                    t.id,
+                    new Date(t.data).toLocaleDateString('pt-BR'),
+                    `"${t.descricao.replace(/"/g, '""')}"`,
+                    t.valor,
+                    t.tipo,
+                    t.categoria,
+                    t.pilar
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `poupamax_extrato_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            mostrarToast("Exportação Concluída", "Arquivo CSV baixado para o seu computador.", "success");
+        }
+
+        /**
+         * Exibe balão de notificação Customizado
+         */
+        function mostrarToast(titulo, mensagem, tipo = 'success') {
+            const container = document.getElementById('toast-container');
+            const elTitle = document.getElementById('toast-title');
+            const elMsg = document.getElementById('toast-message');
+            const elIcon = document.getElementById('toast-icon');
+
+            elTitle.textContent = titulo;
+            elMsg.textContent = mensagem;
+
+            if (tipo === 'error') {
+                elIcon.innerHTML = `<i data-lucide="alert-circle" class="w-5 h-5 text-rose-500"></i>`;
+            } else {
+                elIcon.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 text-brand-400"></i>`;
+            }
+            lucide.createIcons();
+
+            container.classList.remove('translate-y-20', 'opacity-0');
+            container.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                container.classList.remove('translate-y-0', 'opacity-100');
+                container.classList.add('translate-y-20', 'opacity-0');
+            }, 3500);
+        }
+
+        /**
+         * Modal de Confirmação customizado (sem uso de confirm() nativo)
+         */
+        function confirmarAcao(titulo, desc, onConfirm) {
+            const modal = document.getElementById('modal-confirm');
+            const elTitle = document.getElementById('modal-title');
+            const elDesc = document.getElementById('modal-desc');
+            const btnCancel = document.getElementById('btn-modal-cancel');
+            const btnConfirm = document.getElementById('btn-modal-confirm');
+
+            elTitle.textContent = titulo;
+            elDesc.textContent = desc;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.classList.add('opacity-100');
+            }, 10);
+
+            const fecharModal = () => {
+                modal.classList.remove('opacity-100');
+                modal.classList.add('opacity-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 200);
+            };
+
+            btnCancel.onclick = () => {
+                fecharModal();
+            };
+
+            btnConfirm.onclick = () => {
+                fecharModal();
+                if (onConfirm) onConfirm();
+            };
+        }
+    </script>
+</body>
+</html>
