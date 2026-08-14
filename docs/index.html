@@ -1471,7 +1471,9 @@
          * Compartilha o link do aplicativo com a equipe ou copia para a área de transferência
          */
         function compartilharLink() {
-            const url = window.location.href;
+            const urlPublica = 'https://wsimastias333.github.io/poupamax-financas/';
+            const urlLocal = window.location.href;
+            const url = urlPublica.startsWith('http') ? urlPublica : urlLocal;
             const shareData = {
                 title: 'PoupaMax',
                 text: 'Confira o painel de planejamento financeiro do PoupaMax.',
@@ -1504,16 +1506,16 @@
 
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(url)
-                    .then(() => mostrarToast("Link copiado", "URL pronta para compartilhar com a equipe.", "success"))
+                    .then(() => mostrarToast("Link copiado", "URL pública pronta para compartilhar com a equipe.", "success"))
                     .catch(() => {
                         fallbackCopy();
-                        mostrarToast("Link copiado", "URL pronta para compartilhar com a equipe.", "success");
+                        mostrarToast("Link copiado", "URL pública pronta para compartilhar com a equipe.", "success");
                     });
                 return;
             }
 
             fallbackCopy();
-            mostrarToast("Link copiado", "URL pronta para compartilhar com a equipe.", "success");
+            mostrarToast("Link copiado", "URL pública pronta para compartilhar com a equipe.", "success");
         }
 
         /**
